@@ -18,20 +18,6 @@ class EventDispatcher {
             this._listeners.push(cell);    
     }
     
-    _prepareUpdate() {
-        // toUpdate = toUpdate || this._listeners.slice();
-        const todo = [this];
-        const toUpdate = new Set();
-        while (todo.length) {
-            let next = todo.shift();
-            for (let c of next._listeners) {
-                toUpdate.add(c);
-                if (todo.indexOf(c) === -1)
-                    todo.push(c);
-            }
-        }
-        return [...toUpdate].sort((a, b) => a.id - b.id);
-    }
 }
 
 export class InputCell extends EventDispatcher {
@@ -45,11 +31,30 @@ export class InputCell extends EventDispatcher {
     setValue(value) {
         if (value === this.value) return;
         this.value = value;
-        const toUpdate = this._prepareUpdate();
+        const toUpdate = this._getCellsToUpdate();
         toUpdate.forEach(c => c.update());
     }
 
-    
+    _getCellsToUpdate() {
+        // Return an array of this cell's descendants, ordered such
+        // that a cell allways appears before all its children.
+        const todo = [this];
+        const toUpdate = new Set();
+        while (todo.length) {
+            let next = todo.shift();
+            for (let c of next._listeners) {
+                toUpdate.add(c);
+                if (todo.indexOf(c) === -1)
+                    todo.push(c);
+            }
+        }
+        
+        // Cell identifiers are increasing, a new cell can only depend
+        // on previously existing ones. So sorting cells by id
+        // guarantees that if they update in this order, each will
+        // update exaclty once from up-to-date inputs.
+        return [...toUpdate].sort((a, b) => a.id - b.id);
+    }
 }
 
 export class ComputeCell extends EventDispatcher {
@@ -60,7 +65,6 @@ export class ComputeCell extends EventDispatcher {
         this.inputs = inputs;
         this.formula = formula;
         this.value = formula(inputs);
-        // Listen to changes to input cells
         inputs.forEach(c => c.addListener(this));
     }
     

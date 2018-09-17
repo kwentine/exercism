@@ -1,2 +1,6 @@
 node_modules
 .solution.json
+.idea
+yarn.lock
+__pycache__
+.pytest_cache

@@ -1,79 +1,91 @@
-class EventDispatcher {
+class Cell {
 
     constructor() {
-        this._listeners = [];
-        this._callbacks = new Map();
-    }
-
-    addCallback(callBack) {
-        this._callbacks.set(callBack, () => callBack.update(this));
-    }
-
-    removeCallback(cb) {
-        this._callbacks.delete(cb);
+        this.id = Cell.ID++;
+        this.children = [];
     }
     
-    addListener(cell) {
+    addChild(cell) {
         if (cell && typeof cell.update === 'function')
-            this._listeners.push(cell);    
+            this.children.push(cell);
     }
     
-    _prepareUpdate() {
-        // toUpdate = toUpdate || this._listeners.slice();
+    get descendants() {
+        // Return the Set of this cell's descendants
         const todo = [this];
-        const toUpdate = new Set();
+        const descendants = new Set();
         while (todo.length) {
             let next = todo.shift();
-            for (let c of next._listeners) {
-                toUpdate.add(c);
+            for (let c of next.children) {
+                descendants.add(c);
                 if (todo.indexOf(c) === -1)
                     todo.push(c);
             }
         }
-        return [...toUpdate].sort((a, b) => a.id - b.id);
+        return descendants;
+    }
+
+    toString() {
+        return `${this.constructor.name}:${this.id}`
+    }
+
+    static compare(c1, c2) {
+        // Compare function to use for sorting by increasing topological order:
+        // a parent always appears before all of its descendants
+        if (c1 === c2) return 0;
+        if (c1.descendants.has(c2)) return -1;
+        if (c2.descendants.has(c1)) return 1;
+        return 0;
     }
 }
+Cell.ID = 0;
 
-export class InputCell extends EventDispatcher {
+export class InputCell extends Cell {
 
     constructor(value) {
         super();
-        this.oldValue = undefined;
         this.value = value;
     }
 
     setValue(value) {
         if (value === this.value) return;
         this.value = value;
-        const toUpdate = this._prepareUpdate();
-        toUpdate.forEach(c => c.update());
+        const updateOrder = [...this.descendants].sort(Cell.compare);
+        updateOrder.forEach(c => c.update());
     }
 
     
 }
 
-export class ComputeCell extends EventDispatcher {
+export class ComputeCell extends Cell {
 
     constructor(inputs, formula) {
         super();
-        this.id = ComputeCell.ID++;
+        this.callbacks = new Map();
         this.inputs = inputs;
         this.formula = formula;
         this.value = formula(inputs);
         // Listen to changes to input cells
-        inputs.forEach(c => c.addListener(this));
+        inputs.forEach(c => c.addChild(this));
     }
     
     update() {
         const newValue = this.formula(this.inputs);
         if (newValue === this.value) return;
         this.value = newValue;
-        for (let cb of this._callbacks.values()) {
+        for (let cb of this.callbacks.values()) {
             cb();
         }
     }
+
+    addCallback(callBack) {
+        this.callbacks.set(callBack, () => callBack.update(this));
+    }
+
+    removeCallback(cb) {
+        this.callbacks.delete(cb);
+    }
 }
-ComputeCell.ID = 0;
 
 export class CallbackCell {
 

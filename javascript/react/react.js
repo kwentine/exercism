@@ -1,7 +1,7 @@
 class Cell {
 
     constructor() {
-        this.id = Cell.ID++;
+        this.id = Cell.uid++;
         this.children = [];
     }
     
@@ -10,57 +10,50 @@ class Cell {
             this.children.push(cell);
     }
     
-    get descendants() {
-        // Return the Set of this cell's descendants
+    // Return this cell's descendants sorted in a topological order
+    // (ie such that dependencies appear after all their inputs)
+    get lineage() {
+        
+        // Cells to sort
         const todo = [this];
-        const descendants = new Set();
-        while (todo.length) {
-            let next = todo.shift();
-            for (let c of next.children) {
-                descendants.add(c);
-                if (todo.indexOf(c) === -1)
-                    todo.push(c);
-            }
-        }
-        return descendants;
-    }
+        
+        // Map between cells and the set of their inputs that are still unsorted
+        // Invariant: all nodes in the todo list have an entry in the input map
+        const inputMap = new Map([[this, new Set()]]);
 
-    sortedDescendants() {
-        const incomingEdges = new Map([this, new Set()]);
-        const todo = [this];
         const result = [];
         while (todo.length) {
+            // Cycle through the cells until we find one with no unsorted input
             const next = todo.shift();
-            if (!incomingEdges.get(next).size) {
+            if (inputMap.get(next).size) {
                 todo.push(next);
                 continue;
             }
+
+            // console.log('Found one.');
+
+            // This cell's inputs have already been sorted, so append
+            // it to the result.
             result.push(next);
+
+            
             for (let c of next.children) {
-                let incoming = incomingEdges.get(c) || new Set(c.inputs);
-                incoming.delete(this);
-                if (!incomingEdges.has(c))
-                    incomingEdges[c] = incoming;
-                todo.push(c);
+                // The child cell has not been encountered yet
+                if (!inputMap.has(c)) {
+                    inputMap.set(c, new Set(c.inputs));
+                    todo.push(c);
+                }
+
+                // Update the input map 
+                inputMap.get(c).delete(next);
             }
+            // console.log('Remaining: ' + todo.length);
         }
+
         return result;
     }
-
-    toString() {
-        return `${this.constructor.name}:${this.id}`;
-    }
-
-    static compare(c1, c2) {
-        // Compare function to use for sorting by increasing topological order:
-        // a parent always appears before all of its descendants
-        if (c1 === c2) return 0;
-        if (c1.descendants.has(c2)) return -1;
-        if (c2.descendants.has(c1)) return 1;
-        return 0;
-    }
 }
-Cell.ID = 0;
+Cell.uid = 0;
 
 export class InputCell extends Cell {
 
@@ -72,34 +65,8 @@ export class InputCell extends Cell {
     setValue(value) {
         if (value === this.value) return;
         this.value = value;
-<<<<<<< HEAD
-        const toUpdate = this._getCellsToUpdate();
-        toUpdate.forEach(c => c.update());
-=======
-        const updateOrder = [...this.descendants].sort(Cell.compare);
-        updateOrder.forEach(c => c.update());
->>>>>>> 21fbb885677c3b8f2241b48215c607550bc62065
-    }
-
-    _getCellsToUpdate() {
-        // Return an array of this cell's descendants, ordered such
-        // that a cell allways appears before all its children.
-        const todo = [this];
-        const toUpdate = new Set();
-        while (todo.length) {
-            let next = todo.shift();
-            for (let c of next._listeners) {
-                toUpdate.add(c);
-                if (todo.indexOf(c) === -1)
-                    todo.push(c);
-            }
-        }
-        
-        // Cell identifiers are increasing, a new cell can only depend
-        // on previously existing ones. So sorting cells by id
-        // guarantees that if they update in this order, each will
-        // update exaclty once from up-to-date inputs.
-        return [...toUpdate].sort((a, b) => a.id - b.id);
+        const [, ...updateSequence] = this.lineage;
+        updateSequence.forEach(c => c.update());
     }
 }
 
@@ -111,12 +78,7 @@ export class ComputeCell extends Cell {
         this.inputs = inputs;
         this.formula = formula;
         this.value = formula(inputs);
-<<<<<<< HEAD
-        inputs.forEach(c => c.addListener(this));
-=======
-        // Listen to changes to input cells
         inputs.forEach(c => c.addChild(this));
->>>>>>> 21fbb885677c3b8f2241b48215c607550bc62065
     }
     
     update() {

@@ -208,4 +208,14 @@ describe('React module', () => {
 
     expect(callback.values).toEqual([]);
   });
+
+    test('sorts lineage correctly', () => {
+        const one = () => 1;
+        const c0 = new InputCell(1);
+        const c1 = new ComputeCell([c0], one);
+        const c2 = new ComputeCell([c0, c1], one);
+        const c3 = new ComputeCell([c2], one);
+        const c4 = new ComputeCell([c3], one);
+        expect(c0.lineage.map(c => c.id)).toEqual([0,1,2,3,4].map(n => n + c0.id));
+    });
 });

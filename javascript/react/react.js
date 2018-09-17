@@ -25,8 +25,30 @@ class Cell {
         return descendants;
     }
 
+    sortedDescendants() {
+        const incomingEdges = new Map([this, new Set()]);
+        const todo = [this];
+        const result = [];
+        while (todo.length) {
+            const next = todo.shift();
+            if (!incomingEdges.get(next).size) {
+                todo.push(next);
+                continue;
+            }
+            result.push(next);
+            for (let c of next.children) {
+                let incoming = incomingEdges.get(c) || new Set(c.inputs);
+                incoming.delete(this);
+                if (!incomingEdges.has(c))
+                    incomingEdges[c] = incoming;
+                todo.push(c);
+            }
+        }
+        return result;
+    }
+
     toString() {
-        return `${this.constructor.name}:${this.id}`
+        return `${this.constructor.name}:${this.id}`;
     }
 
     static compare(c1, c2) {

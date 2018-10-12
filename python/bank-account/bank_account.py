@@ -30,7 +30,8 @@ class BankAccount(object):
     def close(self):
         self._is_open = False
 
-
+# TODO
+# Direct access to the `balance` attribute makes precautions below useless
 def _get_operation(self, name):
 
     def withdraw(self, amount):

@@ -1,13 +1,6 @@
-from functools import wraps
+import threading
 
-
-def ensure_open(func):
-    @wraps(func)
-    def wrapped(instance, *args, **kwargs):
-        if not instance._is_open:
-            raise ValueError(f'Operation `{func.__name__}` not allowed on close account.')
-        return func(instance, *args, **kwargs)
-    return wrapped
+lock = threading.Lock()
 
 
 class BankAccount(object):
@@ -18,21 +11,53 @@ class BankAccount(object):
     def __init__(self):
         pass
 
-    @ensure_open
     def get_balance(self):
+
+        if not self._is_open:
+            raise ValueError('Account is closed.')
+
         return self.balance
 
     def open(self):
         self._is_open = True
         self.balance = 0
 
-    @ensure_open
-    def deposit(self, amount):
-        self.balance += amount
-
-    @ensure_open
-    def withdraw(self, amount):
-        self.balance -= amount
+    def __getattr__(self, name):
+        if name not in ['deposit', 'withdraw']:
+            return super().__getattr__(name)
+        return _get_operation(self, name)
 
     def close(self):
         self._is_open = False
+
+
+def _get_operation(self, name):
+
+    def withdraw(self, amount):
+        self.balance -= amount
+
+    def deposit(self, amount):
+        self.balance += amount
+
+    operations = {'withdraw': withdraw, 'deposit': deposit}
+
+    def op(amount):
+        with lock:
+            if not self._is_open:
+                raise ValueError(
+                    f'Operation `{name}`' 
+                    'not allowed on close account.'
+                )
+
+            if amount < 0:
+                raise ValueError('Amount cannot be positive')
+
+            if name == 'withdraw':
+                if self.balance < amount:
+                    raise ValueError('Insufficient funds')
+
+            operations[name](self, amount)
+
+    return op
+
+

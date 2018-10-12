@@ -49,41 +49,41 @@ class BankAccountTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.account.get_balance()
 
-    def xtest_deposit_into_closed_account(self):
+    def test_deposit_into_closed_account(self):
         self.account.open()
         self.account.close()
 
         with self.assertRaises(ValueError):
             self.account.deposit(50)
 
-    def xtest_withdraw_from_closed_account(self):
+    def test_withdraw_from_closed_account(self):
         self.account.open()
         self.account.close()
 
         with self.assertRaises(ValueError):
             self.account.withdraw(50)
 
-    def xtest_cannot_withdraw_more_than_deposited(self):
+    def test_cannot_withdraw_more_than_deposited(self):
         self.account.open()
         self.account.deposit(25)
 
         with self.assertRaises(ValueError):
             self.account.withdraw(50)
 
-    def xtest_cannot_withdraw_negative(self):
+    def test_cannot_withdraw_negative(self):
         self.account.open()
         self.account.deposit(100)
 
         with self.assertRaises(ValueError):
             self.account.withdraw(-50)
 
-    def xtest_cannot_deposit_negative(self):
+    def test_cannot_deposit_negative(self):
         self.account.open()
 
         with self.assertRaises(ValueError):
             self.account.deposit(-50)
 
-    def xtest_can_handle_concurrent_transactions(self):
+    def test_can_handle_concurrent_transactions(self):
         self.account.open()
         self.account.deposit(1000)
 

@@ -21,6 +21,13 @@ class TreeNode:
                 self.right.append(node)
         return self
 
+    def __iter__(self):
+        if self.left:
+            yield from self.left
+        yield self.data
+        if self.right:
+            yield from self.right
+
 class BinarySearchTree:
 
     root = None
@@ -39,15 +46,9 @@ class BinarySearchTree:
     def data(self):
         return self.root
 
+    def __iter__(self):
+        if self.root is not None:
+            yield from self.root
+
     def sorted_data(self):
-        return flatten_node(self.root)
-
-
-def flatten_node(node, l=None):
-    if l is None:
-        l = []
-    if node is None:
-        return l
-    smaller = flatten_node(node.left, l)
-    smaller.append(str(node.data))
-    return flatten_node(node.right, smaller)
+        return [str(n) for n in list(self)]
